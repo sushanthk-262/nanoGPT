@@ -74,7 +74,7 @@ class Head(nn.Module):
         q = self.query(x)
         v = self.value(x)
 
-        wei = k @ q.transpose(-2,-1) * C**-5
+        wei = k @ q.transpose(-2,-1) * C**-0.5
         wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
         wei = F.softmax(wei, dim=-1)
 
@@ -94,14 +94,14 @@ class BigramLanguageModel(nn.Module):
         self.lm_head = nn.Linear(n_embd, vocab_size)
 
     def forward(self, idx, targets=None):
-
+        B,T = idx.shape
         token_emb = self.token_embedding_table(idx)
         position_emb = self.position_embedding_table(torch.arange(T, device=device))
         x = token_emb + position_emb
         x = self.sa_head(x)
         logits = self.lm_head(x)
 
-        if targets is None:
+        if targets is None:     
             loss = None
         else:
             B, T, C = logits.shape
