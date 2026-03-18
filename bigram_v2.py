@@ -102,6 +102,7 @@ class FeedForward(nn.Module):
             nn.Linear(n_embd, 4 * n_embd),
             nn.ReLU(),
             nn.Linear(4 * n_embd, n_embd),
+            nn.LayerNorm(n_embd),
         )
 
     def forward(self, x):
@@ -115,10 +116,12 @@ class Block(nn.Module):
         head_size = n_embd // n_head
         self.sa = MultiHeadAttention(n_head, head_size)
         self.ffw = FeedForward(n_embd)
+        self.ln1 = nn.LayerNorm(n_embd)
+        self.ln2 = nn.LayerNorm(n_embd)
 
     def forward(self, x):
-        x = x + self.sa(x)
-        x = x + self.ffw(x)
+        x = x + self.sa(self.ln1(x))
+        x = x + self.ffw(self.ln2(x))
         return x
 
 
