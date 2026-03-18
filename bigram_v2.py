@@ -87,17 +87,21 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, num_heads, head_size):
         super().__init__()
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.proj = nn.Linear(n_embd, n_embd)
     
     def forward(self, x):
-        return torch.cat([h(x) for h in self.heads], dim=-1)
+        out  = torch.cat([h(x) for h in self.heads], dim=-1)
+        out = self.proj(out)
+        return out
 
 class FeedForward(nn.Module):
     """ a simple feed-forward network """
-    def __inint__(self, n_embd):
+    def __init__(self, n_embd):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, n_embd),
+            nn.Linear(n_embd, 4 * n_embd),
             nn.ReLU(),
+            nn.Linear(4 * n_embd, n_embd),
         )
 
     def forward(self, x):
@@ -113,8 +117,8 @@ class Block(nn.Module):
         self.ffw = FeedForward(n_embd)
 
     def forward(self, x):
-        x = self.sa(x)
-        x = self.ffw(x)
+        x = x + self.sa(x)
+        x = x + self.ffw(x)
         return x
 
 
@@ -138,8 +142,7 @@ class BigramLanguageModel(nn.Module):
         token_emb = self.token_embedding_table(idx)
         position_emb = self.position_embedding_table(torch.arange(T, device=device))
         x = token_emb + position_emb
-        x = self.sa_heads(x)
-        x = self.ffw(x)
+        x = self.blocks(x)
         logits = self.lm_head(x)
 
         if targets is None:     
